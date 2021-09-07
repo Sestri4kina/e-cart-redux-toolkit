@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import { getProducts } from "../../app/api";
 import {useAppDispatch, useAppSelector} from "../../app/hooks";
+import {addToCart} from "../cart/cartSlice";
 import styles from "./Products.module.css";
-import {receivedProducts} from "./productsSlice";
+import {receivedProducts, selectProducts} from "./productsSlice";
 
 export function Products() {
   const  dispatch = useAppDispatch();
@@ -12,7 +13,11 @@ export function Products() {
       dispatch(receivedProducts(products));
     });
   }, []);
-  const products = useAppSelector(state => state.products.products);
+  const products = useAppSelector(selectProducts);
+
+  const onAddToCart = useCallback((product) => {
+    dispatch(addToCart(product.id));
+  }, [dispatch]);
 
   return (
     <main className="page">
@@ -30,7 +35,7 @@ export function Products() {
                 <h1>{product.name}</h1>
                 <p>{product.description}</p>
                 <p>${product.price}</p>
-                <button>Add to Cart 🛒</button>
+                <button onClick={() => onAddToCart(product)}>Add to Cart 🛒</button>
               </div>
             </article>
           </li>

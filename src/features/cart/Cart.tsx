@@ -1,7 +1,23 @@
-import React from "react";
+import React, {useCallback} from "react";
+import {useAppDispatch, useAppSelector} from "../../app/hooks";
+import {selectProducts} from "../products/productsSlice";
 import styles from "./Cart.module.css";
+import {removeFromCart, selectCartItems, selectTotalPrice, updateQuantity} from "./cartSlice";
 
 export function Cart() {
+  const cartItems = useAppSelector(selectCartItems);
+  const products = useAppSelector(selectProducts);
+  const totalPrice = useAppSelector(selectTotalPrice);
+
+  const dispatch = useAppDispatch();
+  const onRemoveItemFromCart = useCallback((id) => {
+    dispatch(removeFromCart(id));
+  }, [dispatch]);
+  const onUpdateQuantity = useCallback((e: React.FocusEvent<HTMLInputElement>, id: string) => {
+    const quantity = Number(e.target.value) ?? 0;
+    dispatch(updateQuantity({id, quantity}));
+  }, [dispatch]);
+
   return (
     <main className="page">
       <h1>Shopping Cart</h1>
@@ -15,36 +31,38 @@ export function Cart() {
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Magnifying Glass</td>
-            <td>
-              <input type="text" className={styles.input} defaultValue={21} />
-            </td>
-            <td>$44.44</td>
-            <td>
-              <button aria-label="Remove Magnifying Glass from Shopping Cart">
-                X
-              </button>
-            </td>
-          </tr>
-          <tr>
-            <td>Football Cleats</td>
-            <td>
-              <input type="text" className={styles.input} defaultValue={17} />
-            </td>
-            <td>$25.99</td>
-            <td>
-              <button aria-label="Remove Football Cleats from Shopping Cart">
-                X
-              </button>
-            </td>
-          </tr>
+          {
+            Object.entries(cartItems).map(([id, quantity]) => {
+              return (
+                <tr>
+                  <td>{products[id].name}</td>
+                  <td>
+                    <input 
+                      type="number"
+                      className={styles.input}
+                      defaultValue={quantity}
+                      onBlur={(e) => onUpdateQuantity(e, id)}
+                    />
+                  </td>
+                  <td>{(products[id].price * quantity).toFixed(2)}</td>
+                  <td>
+                    <button
+                      aria-label={`Remove ${products[id].name} from Shopping Cart`}
+                      onClick={() => onRemoveItemFromCart(id)}
+                    >
+                      X
+                    </button>
+                  </td>
+                </tr>
+              );
+            })
+          }
         </tbody>
         <tfoot>
           <tr>
             <td>Total</td>
             <td></td>
-            <td className={styles.total}>${0.0}</td>
+            <td className={styles.total}>${totalPrice}</td>
             <td></td>
           </tr>
         </tfoot>
