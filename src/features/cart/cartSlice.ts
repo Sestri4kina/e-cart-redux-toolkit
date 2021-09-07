@@ -1,14 +1,32 @@
-import { createSelector, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSelector, createSlice, PayloadAction } from "@reduxjs/toolkit";
+import {checkout} from "../../app/api";
 import {RootState} from "../../app/store";
 import {selectProducts} from "../products/productsSlice";
 
+type CheckoutState = 'READY' | 'ERROR' | 'LOADING'; 
 export interface CartState {
     items: {[productID: string]: number}; 
+    checkoutState: CheckoutState;
+    errorMessage: string;
 }
 
 const initialState: CartState = {
-    items: {}
+    items: {},
+    checkoutState: 'READY',
+    errorMessage: ''
 };
+
+export const checkoutCart = createAsyncThunk<
+    {success: boolean},
+    undefined,
+    {state: RootState}
+>('cart/checkout', async (_, thunkApi) => {
+    const state = thunkApi.getState();
+    const items = state.cart.items;
+    const response = await checkout(items);
+    return response;
+});
+
 const cartSlice = createSlice({
     name: 'cart',
     initialState,
@@ -29,6 +47,26 @@ const cartSlice = createSlice({
             const {id, quantity} = action.payload;
             state.items[id] = quantity;
         }
+    },
+    extraReducers: function(builder) {
+        builder.addCase(checkoutCart.pending, (state, action) => {
+            state.checkoutState = 'LOADING';
+        });
+        builder.addCase(checkoutCart.fulfilled, (state, action: PayloadAction<{success: boolean}>) => {
+            const {success} = action.payload;
+
+            if (success) {
+                state.checkoutState = 'READY';
+                state.items = {};
+            } else {
+                state.checkoutState = 'ERROR';
+            }
+            
+        });
+        builder.addCase(checkoutCart.rejected, (state, action) => {
+            state.checkoutState = 'ERROR';
+            state.errorMessage = action.error.message ?? 'Error occured';
+        });
     }
 });
 
@@ -60,4 +98,14 @@ export const selectTotalPrice = createSelector(
         });
         return totalPrice.toFixed(2);
     }
+);
+
+export const selectCheckoutState = createSelector(
+    (state: RootState) => state.cart.checkoutState,
+    checkoutState => checkoutState
+);
+
+export const selectErrorMessage = createSelector(
+    (state: RootState) => state.cart.errorMessage,
+    errorMessage => errorMessage
 );

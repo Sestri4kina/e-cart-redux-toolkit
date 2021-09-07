@@ -1,13 +1,24 @@
 import React, {useCallback} from "react";
+import classNames from "classnames";
 import {useAppDispatch, useAppSelector} from "../../app/hooks";
 import {selectProducts} from "../products/productsSlice";
 import styles from "./Cart.module.css";
-import {removeFromCart, selectCartItems, selectTotalPrice, updateQuantity} from "./cartSlice";
+import {
+  removeFromCart,
+  selectCartItems,
+  selectCheckoutState,
+  selectTotalPrice,
+  updateQuantity,
+  checkoutCart,
+  selectErrorMessage
+} from "./cartSlice";
 
 export function Cart() {
   const cartItems = useAppSelector(selectCartItems);
   const products = useAppSelector(selectProducts);
   const totalPrice = useAppSelector(selectTotalPrice);
+  const checkoutState = useAppSelector(selectCheckoutState);
+  const errorMessage = useAppSelector(selectErrorMessage);
 
   const dispatch = useAppDispatch();
   const onRemoveItemFromCart = useCallback((id) => {
@@ -17,11 +28,21 @@ export function Cart() {
     const quantity = Number(e.target.value) ?? 0;
     dispatch(updateQuantity({id, quantity}));
   }, [dispatch]);
+  const onCheckout = useCallback((e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    dispatch(checkoutCart());
+  }, [dispatch]);
+
+  const tableClasses = classNames({
+    [styles.table]: true,
+    [styles.checkoutError]: checkoutState === 'ERROR',
+    [styles.checkoutLoading]: checkoutState === 'LOADING'
+  });
 
   return (
     <main className="page">
       <h1>Shopping Cart</h1>
-      <table className={styles.table}>
+      <table className={tableClasses}>
         <thead>
           <tr>
             <th>Product</th>
@@ -34,7 +55,7 @@ export function Cart() {
           {
             Object.entries(cartItems).map(([id, quantity]) => {
               return (
-                <tr>
+                <tr key={id}>
                   <td>{products[id].name}</td>
                   <td>
                     <input 
@@ -67,8 +88,16 @@ export function Cart() {
           </tr>
         </tfoot>
       </table>
-      <form>
-        <button className={styles.button} type="submit">
+      <form onSubmit={onCheckout}>
+        {
+          checkoutState === 'ERROR' && (
+            <p className={styles.errorBox}>{errorMessage}</p>
+          )
+        }
+        <button 
+          className={styles.button}
+          type="submit"
+        >
           Checkout
         </button>
       </form>
